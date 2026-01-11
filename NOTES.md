@@ -1,11 +1,11 @@
-# gw - Implementation Notes
+# gday - Implementation Notes
 
 ## Architecture
 
 ### Project Structure
 
 ```
-gw/
+gday/
 ├── main.go                    # Entry point
 ├── cmd/                       # Cobra commands
 │   ├── root.go               # Root command and help
@@ -31,7 +31,7 @@ gw/
 
 3. **Local OAuth Flow**: Uses localhost callback for OAuth2 instead of device flow. This works better in development environments where a browser is available.
 
-4. **Token Caching**: OAuth tokens are cached in `~/.gw/token.json` and automatically refreshed when expired.
+4. **Token Caching**: OAuth tokens are cached in `~/.gday/token.json` and automatically refreshed when expired.
 
 5. **Minimal External Dependencies**: Only essential dependencies:
    - `github.com/spf13/cobra` - CLI framework
@@ -48,8 +48,8 @@ The tool requires users to create their own OAuth credentials because:
 The setup process:
 1. User creates OAuth credentials in Google Cloud Console
 2. Downloads credentials JSON
-3. Pastes JSON into `gw auth setup`
-4. Runs `gw auth login` to complete OAuth flow
+3. Pastes JSON into `gday auth setup`
+4. Runs `gday auth login` to complete OAuth flow
 5. Token is cached and refreshed automatically
 
 ### Gmail Implementation
