@@ -288,6 +288,20 @@ func (s *Service) MarkAsUnread(ctx context.Context, messageID string) error {
 	return err
 }
 
+// ArchiveMessage removes a message from the inbox (archives it)
+func (s *Service) ArchiveMessage(ctx context.Context, messageID string) error {
+	_, err := s.srv.Users.Messages.Modify("me", messageID, &gmail.ModifyMessageRequest{
+		RemoveLabelIds: []string{"INBOX"},
+	}).Do()
+	return err
+}
+
+// TrashMessage moves a message to trash
+func (s *Service) TrashMessage(ctx context.Context, messageID string) error {
+	_, err := s.srv.Users.Messages.Trash("me", messageID).Do()
+	return err
+}
+
 // parseMessage converts a Gmail API message to our Message type
 func parseMessage(m *gmail.Message, includeBody bool) *Message {
 	msg := &Message{

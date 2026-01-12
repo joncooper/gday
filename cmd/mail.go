@@ -582,6 +582,104 @@ var mailLabelsCmd = &cobra.Command{
 	},
 }
 
+var mailArchiveCmd = &cobra.Command{
+	Use:   "archive <message-id> [message-id...]",
+	Short: "Archive messages (remove from inbox)",
+	Long: `Archive one or more messages by removing them from the inbox.
+
+Examples:
+  gday mail archive abc123             # Archive single message
+  gday mail archive abc123 def456      # Archive multiple messages`,
+	Args: cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		client, err := auth.GetClient(ctx)
+		if err != nil {
+			exitError("%v", err)
+		}
+
+		srv, err := gdaygmail.NewService(ctx, client)
+		if err != nil {
+			exitError("%v", err)
+		}
+
+		var archived []string
+		var failed []string
+
+		for _, messageID := range args {
+			if err := srv.ArchiveMessage(ctx, messageID); err != nil {
+				failed = append(failed, messageID)
+			} else {
+				archived = append(archived, messageID)
+			}
+		}
+
+		if isJSONOutput() {
+			outputJSON(struct {
+				Archived []string `json:"archived"`
+				Failed   []string `json:"failed,omitempty"`
+			}{Archived: archived, Failed: failed})
+			return
+		}
+
+		if len(archived) > 0 {
+			fmt.Printf("Archived %d message(s)\n", len(archived))
+		}
+		if len(failed) > 0 {
+			fmt.Printf("Failed to archive %d message(s): %v\n", len(failed), failed)
+		}
+	},
+}
+
+var mailTrashCmd = &cobra.Command{
+	Use:   "trash <message-id> [message-id...]",
+	Short: "Move messages to trash",
+	Long: `Move one or more messages to the trash.
+
+Examples:
+  gday mail trash abc123             # Trash single message
+  gday mail trash abc123 def456      # Trash multiple messages`,
+	Args: cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		client, err := auth.GetClient(ctx)
+		if err != nil {
+			exitError("%v", err)
+		}
+
+		srv, err := gdaygmail.NewService(ctx, client)
+		if err != nil {
+			exitError("%v", err)
+		}
+
+		var trashed []string
+		var failed []string
+
+		for _, messageID := range args {
+			if err := srv.TrashMessage(ctx, messageID); err != nil {
+				failed = append(failed, messageID)
+			} else {
+				trashed = append(trashed, messageID)
+			}
+		}
+
+		if isJSONOutput() {
+			outputJSON(struct {
+				Trashed []string `json:"trashed"`
+				Failed  []string `json:"failed,omitempty"`
+			}{Trashed: trashed, Failed: failed})
+			return
+		}
+
+		if len(trashed) > 0 {
+			fmt.Printf("Trashed %d message(s)\n", len(trashed))
+		}
+		if len(failed) > 0 {
+			fmt.Printf("Failed to trash %d message(s): %v\n", len(failed), failed)
+		}
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(mailCmd)
 
@@ -632,6 +730,12 @@ func init() {
 
 	// Labels command
 	mailCmd.AddCommand(mailLabelsCmd)
+
+	// Archive command
+	mailCmd.AddCommand(mailArchiveCmd)
+
+	// Trash command
+	mailCmd.AddCommand(mailTrashCmd)
 }
 
 // Helper functions

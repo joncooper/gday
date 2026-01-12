@@ -419,6 +419,145 @@ Examples:
 	},
 }
 
+var calUpdateCmd = &cobra.Command{
+	Use:   "update <event-id>",
+	Short: "Update an existing event",
+	Long: `Update an existing calendar event.
+
+Examples:
+  gday cal update abc123 --title "New Title"
+  gday cal update abc123 --start "2024-01-15 15:00" --end "2024-01-15 16:00"
+  gday cal update abc123 --location "Room 101" --description "Updated notes"`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		client, err := auth.GetClient(ctx)
+		if err != nil {
+			exitError("%v", err)
+		}
+
+		srv, err := gdaycal.NewService(ctx, client)
+		if err != nil {
+			exitError("%v", err)
+		}
+
+		eventID := args[0]
+		calID, _ := cmd.Flags().GetString("calendar")
+		title, _ := cmd.Flags().GetString("title")
+		startStr, _ := cmd.Flags().GetString("start")
+		endStr, _ := cmd.Flags().GetString("end")
+		location, _ := cmd.Flags().GetString("location")
+		description, _ := cmd.Flags().GetString("description")
+
+		updates := make(map[string]interface{})
+
+		if title != "" {
+			updates["title"] = title
+		}
+		if location != "" {
+			updates["location"] = location
+		}
+		if cmd.Flags().Changed("description") {
+			updates["description"] = description
+		}
+		if startStr != "" {
+			start, err := parseDateTime(startStr)
+			if err != nil {
+				exitError("invalid start time: %v", err)
+			}
+			updates["start"] = start
+		}
+		if endStr != "" {
+			end, err := parseDateTime(endStr)
+			if err != nil {
+				exitError("invalid end time: %v", err)
+			}
+			updates["end"] = end
+		}
+
+		if len(updates) == 0 {
+			exitError("no updates specified")
+		}
+
+		updated, err := srv.PatchEvent(ctx, calID, eventID, updates)
+		if err != nil {
+			exitError("%v", err)
+		}
+
+		if isJSONOutput() {
+			outputJSON(EventCreatedJSON{ID: updated.ID, Summary: updated.Summary, HtmlLink: updated.HtmlLink, Status: "updated"})
+			return
+		}
+
+		fmt.Printf("Event updated: %s\n", updated.Summary)
+		fmt.Printf("ID: %s\n", updated.ID)
+	},
+}
+
+var calRsvpCmd = &cobra.Command{
+	Use:   "rsvp <event-id> <yes|no|maybe>",
+	Short: "RSVP to a calendar invitation",
+	Long: `Accept, decline, or mark as tentative your response to a calendar invitation.
+
+Examples:
+  gday cal rsvp abc123 yes      # Accept the invitation
+  gday cal rsvp abc123 no       # Decline the invitation
+  gday cal rsvp abc123 maybe    # Mark as tentative`,
+	Args: cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		client, err := auth.GetClient(ctx)
+		if err != nil {
+			exitError("%v", err)
+		}
+
+		srv, err := gdaycal.NewService(ctx, client)
+		if err != nil {
+			exitError("%v", err)
+		}
+
+		eventID := args[0]
+		response := strings.ToLower(args[1])
+		calID, _ := cmd.Flags().GetString("calendar")
+
+		// Map user-friendly responses to API values
+		var status string
+		switch response {
+		case "yes", "accept", "accepted":
+			status = "accepted"
+		case "no", "decline", "declined":
+			status = "declined"
+		case "maybe", "tentative":
+			status = "tentative"
+		default:
+			exitError("invalid response: %s (use yes, no, or maybe)", response)
+		}
+
+		updated, err := srv.RSVPEvent(ctx, calID, eventID, status)
+		if err != nil {
+			exitError("%v", err)
+		}
+
+		if isJSONOutput() {
+			outputJSON(struct {
+				EventID  string `json:"event_id"`
+				Summary  string `json:"summary"`
+				Response string `json:"response"`
+				Status   string `json:"status"`
+			}{EventID: updated.ID, Summary: updated.Summary, Response: status, Status: "rsvp_updated"})
+			return
+		}
+
+		responseWord := map[string]string{
+			"accepted":  "Accepted",
+			"declined":  "Declined",
+			"tentative": "Marked as tentative",
+		}[status]
+
+		fmt.Printf("%s: %s\n", responseWord, updated.Summary)
+	},
+}
+
 var calCalendarsCmd = &cobra.Command{
 	Use:   "calendars",
 	Short: "List all calendars",
@@ -502,6 +641,17 @@ func init() {
 
 	// Delete command
 	calCmd.AddCommand(calDeleteCmd)
+
+	// Update command
+	calCmd.AddCommand(calUpdateCmd)
+	calUpdateCmd.Flags().StringP("title", "t", "", "New event title")
+	calUpdateCmd.Flags().StringP("start", "s", "", "New start time (YYYY-MM-DD HH:MM)")
+	calUpdateCmd.Flags().StringP("end", "e", "", "New end time (YYYY-MM-DD HH:MM)")
+	calUpdateCmd.Flags().StringP("location", "l", "", "New event location")
+	calUpdateCmd.Flags().StringP("description", "d", "", "New event description")
+
+	// RSVP command
+	calCmd.AddCommand(calRsvpCmd)
 
 	// Search command
 	calCmd.AddCommand(calSearchCmd)

@@ -307,6 +307,82 @@ func (s *Service) Week(ctx context.Context, calendarID string) ([]*Event, error)
 	return s.ListEvents(ctx, calendarID, startOfDay, endOfWeek, 0)
 }
 
+// RSVPEvent updates the current user's RSVP status for an event
+// status should be one of: "accepted", "declined", "tentative"
+func (s *Service) RSVPEvent(ctx context.Context, calendarID, eventID, status string) (*Event, error) {
+	if calendarID == "" {
+		calendarID = "primary"
+	}
+
+	// First get the current event
+	e, err := s.srv.Events.Get(calendarID, eventID).Do()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get event: %w", err)
+	}
+
+	// Find the current user in attendees and update their status
+	// The user's email should match one of the attendees
+	found := false
+	for _, attendee := range e.Attendees {
+		if attendee.Self {
+			attendee.ResponseStatus = status
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return nil, fmt.Errorf("you are not an attendee of this event")
+	}
+
+	// Update the event
+	updated, err := s.srv.Events.Patch(calendarID, eventID, &calendar.Event{
+		Attendees: e.Attendees,
+	}).SendUpdates("all").Do()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update RSVP: %w", err)
+	}
+
+	return parseEvent(updated, calendarID), nil
+}
+
+// PatchEvent updates specific fields of an event without replacing the entire event
+func (s *Service) PatchEvent(ctx context.Context, calendarID, eventID string, updates map[string]interface{}) (*Event, error) {
+	if calendarID == "" {
+		calendarID = "primary"
+	}
+
+	// Build the patch event
+	patch := &calendar.Event{}
+
+	if title, ok := updates["title"].(string); ok && title != "" {
+		patch.Summary = title
+	}
+	if desc, ok := updates["description"].(string); ok {
+		patch.Description = desc
+	}
+	if loc, ok := updates["location"].(string); ok {
+		patch.Location = loc
+	}
+	if start, ok := updates["start"].(time.Time); ok && !start.IsZero() {
+		patch.Start = &calendar.EventDateTime{
+			DateTime: start.Format(time.RFC3339),
+		}
+	}
+	if end, ok := updates["end"].(time.Time); ok && !end.IsZero() {
+		patch.End = &calendar.EventDateTime{
+			DateTime: end.Format(time.RFC3339),
+		}
+	}
+
+	updated, err := s.srv.Events.Patch(calendarID, eventID, patch).Do()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update event: %w", err)
+	}
+
+	return parseEvent(updated, calendarID), nil
+}
+
 // parseEvent converts a calendar.Event to our Event type
 func parseEvent(e *calendar.Event, calendarID string) *Event {
 	event := &Event{

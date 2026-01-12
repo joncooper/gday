@@ -173,6 +173,15 @@ gday mail attachment <message-id> --all -o ./downloads
 gday mail labels  # List all labels
 ```
 
+### Archive and Trash
+
+```bash
+gday mail archive <message-id>           # Archive (remove from inbox)
+gday mail archive abc123 def456          # Archive multiple messages
+gday mail trash <message-id>             # Move to trash
+gday mail trash abc123 def456            # Trash multiple messages
+```
+
 ## Calendar Commands
 
 ### View Events
@@ -209,6 +218,23 @@ gday cal create --title "Team Sync" --start "2024-01-15 10:00" \
 gday cal create --quick "Lunch with John tomorrow at noon"
 gday cal create --quick "Project deadline January 31st"
 gday cal create --quick "1:1 with manager Friday 3-4pm"
+```
+
+### Update Events
+
+```bash
+gday cal update <event-id> --title "New Title"
+gday cal update <event-id> --start "2024-01-15 15:00" --end "2024-01-15 16:00"
+gday cal update <event-id> --location "Room 101"
+gday cal update <event-id> --description "Updated notes"
+```
+
+### RSVP to Invitations
+
+```bash
+gday cal rsvp <event-id> yes      # Accept
+gday cal rsvp <event-id> no       # Decline
+gday cal rsvp <event-id> maybe    # Tentative
 ```
 
 ### Search and Delete

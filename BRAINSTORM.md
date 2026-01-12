@@ -360,14 +360,40 @@ These features make gday especially powerful:
 
 To enable more of these workflows, consider adding:
 
-1. **`mail archive`** - Move to archive
+1. ~~**`mail archive`** - Move to archive~~ ✅ Added!
 2. **`mail label add/remove`** - Label management
 3. **`mail forward`** - Forward emails
-4. **`cal update`** - Modify existing events
-5. **`cal rsvp`** - Accept/decline invitations
+4. ~~**`cal update`** - Modify existing events~~ ✅ Added!
+5. ~~**`cal rsvp`** - Accept/decline invitations~~ ✅ Added!
 6. **`--watch` mode** - Stream new emails/events
 7. **Webhook triggers** - Push notifications
-8. **`mail batch`** - Operate on multiple IDs
+8. **`mail batch`** - Operate on multiple IDs (archive/trash support multiple IDs now!)
+
+## New Automation Possibilities
+
+With `mail archive` and `mail trash`:
+```bash
+# Inbox zero: archive all read emails older than 30 days
+gday mail search "is:read older_than:30d" --json | \
+  jq -r '.messages[].id' | \
+  xargs gday mail archive
+
+# Clean up newsletters
+gday mail search "from:newsletter unsubscribe older_than:7d" --json | \
+  jq -r '.messages[].id' | \
+  xargs gday mail trash
+```
+
+With `cal update` and `cal rsvp`:
+```bash
+# Batch accept all meetings from your manager
+gday cal search "from:manager" --json | \
+  jq -r '.events[].id' | \
+  xargs -I {} gday cal rsvp {} yes
+
+# Reschedule all "1:1" meetings to start 30 mins later
+# (would need scripting for time calculation)
+```
 
 ---
 

@@ -64,6 +64,11 @@ gday mail attachment <message-id> --all     # Download all
 
 # List labels
 gday mail labels
+
+# Archive and trash
+gday mail archive <message-id>    # Archive (remove from inbox)
+gday mail archive id1 id2 id3     # Archive multiple
+gday mail trash <message-id>      # Move to trash
 ```
 
 ## Calendar Commands
@@ -87,6 +92,16 @@ gday cal create --title "Meeting" --start "2024-01-15 14:00"
 # Search events
 gday cal search "meeting"
 gday cal search "John" --days 90
+
+# Update event
+gday cal update <event-id> --title "New Title"
+gday cal update <event-id> --start "2024-01-15 15:00"
+gday cal update <event-id> --location "Room 101"
+
+# RSVP to invitations
+gday cal rsvp <event-id> yes      # Accept
+gday cal rsvp <event-id> no       # Decline
+gday cal rsvp <event-id> maybe    # Tentative
 
 # Delete event
 gday cal delete <event-id>
