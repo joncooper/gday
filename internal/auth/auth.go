@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -383,21 +385,26 @@ func Status() {
 
 // openBrowser attempts to open the URL in the default browser
 func openBrowser(url string) {
-	// Try common browser open commands
-	commands := [][]string{
-		{"xdg-open", url},
-		{"open", url},
-		{"cmd", "/c", "start", url},
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	default: // Linux and others
+		// Try common browser openers in order of preference
+		browsers := []string{"xdg-open", "sensible-browser", "x-www-browser", "firefox", "chromium", "google-chrome"}
+		for _, browser := range browsers {
+			if path, err := exec.LookPath(browser); err == nil {
+				cmd = exec.Command(path, url)
+				break
+			}
+		}
 	}
 
-	for _, cmd := range commands {
-		if _, err := os.Stat("/usr/bin/" + cmd[0]); err == nil {
-			// Command exists, try to run it
-			go func(args []string) {
-				// Best effort - ignore errors
-				os.StartProcess("/usr/bin/"+args[0], args, &os.ProcAttr{})
-			}(cmd)
-			return
-		}
+	if cmd != nil {
+		// Run in background, ignore errors (best effort)
+		cmd.Start()
 	}
 }

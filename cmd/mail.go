@@ -31,7 +31,9 @@ Examples:
   gday mail list --unread     # List only unread emails
   gday mail list --json       # Output as JSON`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx := context.Background()
+		ctx, cancel := newContext()
+		defer cancel()
+
 		client, err := auth.GetClient(ctx)
 		if err != nil {
 			exitError("%v", err)
@@ -290,6 +292,13 @@ Examples:
 		query := strings.Join(args, " ")
 		n, _ := cmd.Flags().GetInt64("number")
 
+		// Get count to show if results are truncated
+		countResult, _ := srv.CountMessages(ctx, query, nil)
+		var totalEstimate int64
+		if countResult != nil {
+			totalEstimate = countResult.EstimatedTotal
+		}
+
 		messages, err := srv.SearchMessages(ctx, query, n)
 		if err != nil {
 			exitError("%v", err)
@@ -309,7 +318,13 @@ Examples:
 			return
 		}
 
-		fmt.Printf("Found %d messages matching: %s\n\n", len(messages), query)
+		// Show result count with indicator if truncated
+		if totalEstimate > int64(len(messages)) {
+			fmt.Printf("Showing %d of %d+ messages matching: %s\n", len(messages), totalEstimate, query)
+			fmt.Printf("(use -n to show more, or narrow with date filters)\n\n")
+		} else {
+			fmt.Printf("Found %d messages matching: %s\n\n", len(messages), query)
+		}
 		for _, m := range messages {
 			unreadMarker := " "
 			if m.IsUnread {

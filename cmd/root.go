@@ -1,12 +1,19 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 )
+
+// Default timeout for operations
+const defaultTimeout = 2 * time.Minute
 
 // Global flags
 var jsonOutput bool
@@ -69,4 +76,25 @@ func outputJSON(data interface{}) {
 // isJSONOutput returns true if JSON output is enabled
 func isJSONOutput() bool {
 	return jsonOutput
+}
+
+// newContext creates a context that cancels on SIGINT/SIGTERM (Ctrl-C)
+// and has a default timeout
+func newContext() (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+
+	// Set up signal handling
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		select {
+		case <-sigChan:
+			cancel()
+		case <-ctx.Done():
+		}
+		signal.Stop(sigChan)
+	}()
+
+	return ctx, cancel
 }
