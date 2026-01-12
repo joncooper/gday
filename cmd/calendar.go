@@ -637,7 +637,7 @@ func init() {
 	calCreateCmd.Flags().StringP("location", "l", "", "Event location")
 	calCreateCmd.Flags().StringP("description", "d", "", "Event description")
 	calCreateCmd.Flags().StringSlice("attendees", nil, "Event attendees (emails)")
-	calCreateCmd.Flags().StringP("quick", "q", "", "Quick add using natural language")
+	calCreateCmd.Flags().String("quick", "", "Quick add using natural language")
 
 	// Delete command
 	calCmd.AddCommand(calDeleteCmd)
@@ -750,12 +750,6 @@ func parseDate(s string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("unable to parse date: %s", s)
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
 
 // eventToJSON converts a calendar.Event to EventJSON
 func eventToJSON(e *gdaycal.Event) EventJSON {
