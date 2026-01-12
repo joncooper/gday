@@ -51,10 +51,18 @@ Examples:
 			labels = append(labels, "UNREAD")
 		}
 
-		messages, err := srv.ListMessages(ctx, n, query, labels)
+		result, err := srv.ListMessagesWithResult(ctx, n, query, labels)
 		if err != nil {
 			exitError("%v", err)
 		}
+
+		// Warn about failures
+		if len(result.FailedIDs) > 0 {
+			fmt.Fprintf(os.Stderr, "Warning: %d of %d messages failed to load\n",
+				len(result.FailedIDs), result.TotalFound)
+		}
+
+		messages := result.Messages
 
 		if isJSONOutput() {
 			jsonMsgs := make([]MessageJSON, 0, len(messages))
@@ -589,9 +597,16 @@ var mailArchiveCmd = &cobra.Command{
 
 Examples:
   gday mail archive abc123             # Archive single message
-  gday mail archive abc123 def456      # Archive multiple messages`,
+  gday mail archive abc123 def456      # Archive multiple messages
+  gday mail archive abc123 --dry-run   # Preview without archiving
+  gday mail archive id1 id2 ... --yes  # Skip confirmation for large batches`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		// Check for confirmation on large batches
+		if !confirmBatch("archive", len(args), false) {
+			return
+		}
+
 		ctx := context.Background()
 		client, err := auth.GetClient(ctx)
 		if err != nil {
@@ -622,12 +637,7 @@ Examples:
 			return
 		}
 
-		if len(archived) > 0 {
-			fmt.Printf("Archived %d message(s)\n", len(archived))
-		}
-		if len(failed) > 0 {
-			fmt.Printf("Failed to archive %d message(s): %v\n", len(failed), failed)
-		}
+		printBatchResult("archived", archived, failed)
 	},
 }
 
@@ -638,9 +648,16 @@ var mailTrashCmd = &cobra.Command{
 
 Examples:
   gday mail trash abc123             # Trash single message
-  gday mail trash abc123 def456      # Trash multiple messages`,
+  gday mail trash abc123 def456      # Trash multiple messages
+  gday mail trash abc123 --dry-run   # Preview without trashing
+  gday mail trash id1 id2 ... --yes  # Skip confirmation for large batches`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		// Check for confirmation on large batches
+		if !confirmBatch("trash", len(args), false) {
+			return
+		}
+
 		ctx := context.Background()
 		client, err := auth.GetClient(ctx)
 		if err != nil {
@@ -671,12 +688,7 @@ Examples:
 			return
 		}
 
-		if len(trashed) > 0 {
-			fmt.Printf("Trashed %d message(s)\n", len(trashed))
-		}
-		if len(failed) > 0 {
-			fmt.Printf("Failed to trash %d message(s): %v\n", len(failed), failed)
-		}
+		printBatchResult("trashed", trashed, failed)
 	},
 }
 

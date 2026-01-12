@@ -43,6 +43,8 @@ func Execute() error {
 func init() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in JSON format")
+	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Preview changes without executing")
+	rootCmd.PersistentFlags().BoolVar(&yesAll, "yes", false, "Skip confirmation prompts")
 }
 
 // Helper to print errors and exit

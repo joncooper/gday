@@ -54,8 +54,24 @@ func NewService(ctx context.Context, client *http.Client) (*Service, error) {
 	return &Service{srv: srv}, nil
 }
 
+// ListResult contains the result of listing messages, including any failures
+type ListResult struct {
+	Messages   []*Message
+	FailedIDs  []string // IDs of messages that failed to load
+	TotalFound int      // Total messages found before fetching details
+}
+
 // ListMessages lists recent emails
 func (s *Service) ListMessages(ctx context.Context, maxResults int64, query string, labelIDs []string) ([]*Message, error) {
+	result, err := s.ListMessagesWithResult(ctx, maxResults, query, labelIDs)
+	if err != nil {
+		return nil, err
+	}
+	return result.Messages, nil
+}
+
+// ListMessagesWithResult lists recent emails and returns detailed result including failures
+func (s *Service) ListMessagesWithResult(ctx context.Context, maxResults int64, query string, labelIDs []string) (*ListResult, error) {
 	req := s.srv.Users.Messages.List("me").MaxResults(maxResults)
 	if query != "" {
 		req = req.Q(query)
@@ -69,16 +85,21 @@ func (s *Service) ListMessages(ctx context.Context, maxResults int64, query stri
 		return nil, fmt.Errorf("failed to list messages: %w", err)
 	}
 
-	messages := make([]*Message, 0, len(resp.Messages))
+	result := &ListResult{
+		Messages:   make([]*Message, 0, len(resp.Messages)),
+		TotalFound: len(resp.Messages),
+	}
+
 	for _, m := range resp.Messages {
 		msg, err := s.GetMessage(ctx, m.Id, false)
 		if err != nil {
-			continue // Skip messages that fail to load
+			result.FailedIDs = append(result.FailedIDs, m.Id)
+			continue
 		}
-		messages = append(messages, msg)
+		result.Messages = append(result.Messages, msg)
 	}
 
-	return messages, nil
+	return result, nil
 }
 
 // GetMessage retrieves a single message

@@ -338,10 +338,22 @@ Examples:
 }
 
 var calDeleteCmd = &cobra.Command{
-	Use:   "delete <event-id>",
-	Short: "Delete an event",
-	Args:  cobra.ExactArgs(1),
+	Use:   "delete <event-id> [event-id...]",
+	Short: "Delete calendar events",
+	Long: `Delete one or more calendar events.
+
+Examples:
+  gday cal delete abc123             # Delete single event (prompts for confirmation)
+  gday cal delete abc123 --yes       # Delete without confirmation
+  gday cal delete abc123 --dry-run   # Preview without deleting
+  gday cal delete id1 id2 id3        # Delete multiple events`,
+	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		// Calendar delete always confirms (alwaysConfirm=true)
+		if !confirmBatch("delete", len(args), true) {
+			return
+		}
+
 		ctx := context.Background()
 		client, err := auth.GetClient(ctx)
 		if err != nil {
@@ -353,19 +365,28 @@ var calDeleteCmd = &cobra.Command{
 			exitError("%v", err)
 		}
 
-		eventID := args[0]
 		calID, _ := cmd.Flags().GetString("calendar")
 
-		if err := srv.DeleteEvent(ctx, calID, eventID); err != nil {
-			exitError("%v", err)
+		var deleted []string
+		var failed []string
+
+		for _, eventID := range args {
+			if err := srv.DeleteEvent(ctx, calID, eventID); err != nil {
+				failed = append(failed, eventID)
+			} else {
+				deleted = append(deleted, eventID)
+			}
 		}
 
 		if isJSONOutput() {
-			outputJSON(StatusJSON{Status: "deleted", Message: "Event deleted successfully"})
+			outputJSON(struct {
+				Deleted []string `json:"deleted"`
+				Failed  []string `json:"failed,omitempty"`
+			}{Deleted: deleted, Failed: failed})
 			return
 		}
 
-		fmt.Println("Event deleted")
+		printBatchResult("deleted", deleted, failed)
 	},
 }
 
@@ -749,7 +770,6 @@ func parseDate(s string) (time.Time, error) {
 
 	return time.Time{}, fmt.Errorf("unable to parse date: %s", s)
 }
-
 
 // eventToJSON converts a calendar.Event to EventJSON
 func eventToJSON(e *gdaycal.Event) EventJSON {
