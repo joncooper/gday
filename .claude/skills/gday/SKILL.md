@@ -122,10 +122,36 @@ gday cal today --json
 
 ## Common Patterns
 
-**Check inbox scale before fetching (important for large inboxes!):**
+**IMPORTANT: The user's mailbox likely has 10-15 years of email (tens of thousands of messages). Always scope queries carefully:**
+
+**1. Check scale before fetching:**
 ```bash
 gday mail count --unread          # Might return 47,382!
 gday mail count -q "is:unread newer_than:7d"  # Narrow down first
+```
+
+**2. Use date filters aggressively:**
+```bash
+gday mail search "from:boss newer_than:30d"     # Last 30 days
+gday mail search "subject:invoice after:2024/01/01"  # This year only
+gday mail list -q "newer_than:7d" --unread      # Recent unread
+```
+
+**3. Paginate large result sets:**
+```bash
+# Get first batch
+gday mail search "from:amazon" -n 20 --json
+
+# For very large sets, combine with date ranges:
+gday mail search "from:amazon after:2024/01/01 before:2024/07/01" -n 50
+gday mail search "from:amazon after:2024/07/01" -n 50
+```
+
+**4. Use count to plan your approach:**
+```bash
+# Before diving in, understand the scale
+gday mail count -q "from:linkedin.com"  # → 8,432 messages
+gday mail count -q "from:linkedin.com newer_than:30d"  # → 47 messages (manageable!)
 ```
 
 **Find specific emails:**
