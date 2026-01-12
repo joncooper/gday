@@ -111,6 +111,17 @@ gday mail list -q "from:boss"     # With search query
 gday mail list --json             # JSON output
 ```
 
+### Count Emails
+
+Get email counts efficiently (single API call, no message fetching):
+
+```bash
+gday mail count                   # Count all emails
+gday mail count --unread          # Count unread emails
+gday mail count -q "from:boss"    # Count emails from specific sender
+gday mail count -q "has:attachment" --json  # JSON output
+```
+
 ### Read Email
 
 ```bash

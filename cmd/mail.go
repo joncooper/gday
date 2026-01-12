@@ -85,6 +85,67 @@ Examples:
 	},
 }
 
+var mailCountCmd = &cobra.Command{
+	Use:   "count",
+	Short: "Count emails matching criteria",
+	Long: `Get a count of emails matching the specified criteria.
+This is efficient - it doesn't fetch message contents, just the count.
+
+Examples:
+  gday mail count                       # Count all emails
+  gday mail count --unread              # Count unread emails
+  gday mail count -q "from:boss"        # Count emails from boss
+  gday mail count -q "is:unread has:attachment"
+  gday mail count --json                # Output as JSON`,
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
+		client, err := auth.GetClient(ctx)
+		if err != nil {
+			exitError("%v", err)
+		}
+
+		srv, err := gdaygmail.NewService(ctx, client)
+		if err != nil {
+			exitError("%v", err)
+		}
+
+		unread, _ := cmd.Flags().GetBool("unread")
+		query, _ := cmd.Flags().GetString("query")
+
+		var labels []string
+		if unread {
+			labels = append(labels, "UNREAD")
+		}
+
+		result, err := srv.CountMessages(ctx, query, labels)
+		if err != nil {
+			exitError("%v", err)
+		}
+
+		if isJSONOutput() {
+			outputJSON(CountJSON{
+				Query:          result.Query,
+				EstimatedTotal: result.EstimatedTotal,
+			})
+			return
+		}
+
+		if query != "" || unread {
+			criteria := query
+			if unread {
+				if criteria != "" {
+					criteria = "unread, " + criteria
+				} else {
+					criteria = "unread"
+				}
+			}
+			fmt.Printf("%d messages (%s)\n", result.EstimatedTotal, criteria)
+		} else {
+			fmt.Printf("%d messages total\n", result.EstimatedTotal)
+		}
+	},
+}
+
 var mailReadCmd = &cobra.Command{
 	Use:   "read <message-id>",
 	Short: "Read an email",
@@ -529,6 +590,11 @@ func init() {
 	mailListCmd.Flags().Int64P("number", "n", 10, "Number of messages to list")
 	mailListCmd.Flags().Bool("unread", false, "Show only unread messages")
 	mailListCmd.Flags().StringP("query", "q", "", "Gmail search query")
+
+	// Count command
+	mailCmd.AddCommand(mailCountCmd)
+	mailCountCmd.Flags().Bool("unread", false, "Count only unread messages")
+	mailCountCmd.Flags().StringP("query", "q", "", "Gmail search query")
 
 	// Read command
 	mailCmd.AddCommand(mailReadCmd)

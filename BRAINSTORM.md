@@ -4,13 +4,37 @@ A collection of useful, clever, and unexpected things you can do with gday.
 
 ---
 
+## 📊 Quick Counts (Start Here!)
+
+Before diving into large datasets, get the lay of the land:
+
+```bash
+gday mail count                          # Total emails
+gday mail count --unread                 # Unread count (tens of thousands? time for inbox zero!)
+gday mail count -q "from:linkedin.com"   # How many LinkedIn notifications?
+gday mail count -q "is:unread has:attachment"  # Unread with attachments
+gday mail count -q "older_than:1y"       # Emails over a year old
+```
+
+These are single-API-call operations - instant results even with massive inboxes.
+
+---
+
 ## 🤖 AI-Powered Workflows (Claude Code Integration)
 
-### 1. **Intelligent Email Triage**
+### 1. **Intelligent Email Triage** (Count-Aware)
 ```bash
-gday mail list --unread --json | claude "Categorize these emails by urgency (critical/important/low) and suggest which ones need immediate response vs can wait"
+# First, check the scale
+gday mail count --unread  # → "47,382 messages (unread)"
+
+# If count is huge, narrow down first
+gday mail count -q "is:unread newer_than:7d"  # → "127 messages"
+
+# Now triage the manageable set
+gday mail list -q "is:unread newer_than:7d" -n 50 --json | \
+  claude "Categorize these by urgency (critical/important/low)"
 ```
-Let AI read your inbox and tell you what actually needs attention.
+Let AI read your inbox, but be smart about scope first!
 
 ### 2. **Auto-Draft Replies**
 "Read my last 5 emails and draft contextual replies for each. Use my writing style from the sent folder."
@@ -75,7 +99,26 @@ gday cal today --json > today.json
 
 ## 📊 Analytics & Insights
 
-### 9. **Email Response Time Tracker**
+### 9. **Inbox Health Dashboard**
+```bash
+# One-liner inbox overview
+echo "Total: $(gday mail count --json | jq .estimated_total)"
+echo "Unread: $(gday mail count --unread --json | jq .estimated_total)"
+echo "This week: $(gday mail count -q 'newer_than:7d' --json | jq .estimated_total)"
+echo "Newsletters: $(gday mail count -q 'unsubscribe' --json | jq .estimated_total)"
+echo "With attachments: $(gday mail count -q 'has:attachment' --json | jq .estimated_total)"
+```
+
+### 10. **Email Source Analysis**
+```bash
+# Who's filling your inbox?
+for sender in linkedin.com github.com slack.com jira.atlassian.com; do
+  count=$(gday mail count -q "from:$sender" --json | jq .estimated_total)
+  echo "$sender: $count"
+done
+```
+
+### 11. **Email Response Time Tracker**
 ```bash
 gday mail search "in:inbox after:2024/01/01" --json | \
   jq 'map({from, date})' | \
@@ -302,13 +345,14 @@ gday cal list --days 30 --json | \
 
 These features make gday especially powerful:
 
-1. **`--json` output** - Machine-readable for pipelines
-2. **`--body-stdin`** - Compose emails from any source
-3. **`--body-file`** - Template-based emails
-4. **Gmail search syntax** - Precise filtering (`from:`, `after:`, `has:attachment`)
-5. **`--quick` natural language** - "Meeting with Bob tomorrow at 3pm"
-6. **Thread support** - Full conversation context
-7. **Multi-calendar** - Aggregate personal + work calendars
+1. **`mail count`** - Fast inbox analytics (single API call, no message fetching)
+2. **`--json` output** - Machine-readable for pipelines
+3. **`--body-stdin`** - Compose emails from any source
+4. **`--body-file`** - Template-based emails
+5. **Gmail search syntax** - Precise filtering (`from:`, `after:`, `has:attachment`)
+6. **`--quick` natural language** - "Meeting with Bob tomorrow at 3pm"
+7. **Thread support** - Full conversation context
+8. **Multi-calendar** - Aggregate personal + work calendars
 
 ---
 

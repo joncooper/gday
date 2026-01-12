@@ -116,6 +116,34 @@ func (s *Service) SearchMessages(ctx context.Context, query string, maxResults i
 	return s.ListMessages(ctx, maxResults, query, nil)
 }
 
+// CountResult holds the result of a count query
+type CountResult struct {
+	EstimatedTotal int64
+	Query          string
+}
+
+// CountMessages returns an estimated count of messages matching the query
+// This is efficient - it doesn't fetch message contents, just the count
+func (s *Service) CountMessages(ctx context.Context, query string, labelIDs []string) (*CountResult, error) {
+	req := s.srv.Users.Messages.List("me").MaxResults(1) // Only need 1 to get the estimate
+	if query != "" {
+		req = req.Q(query)
+	}
+	if len(labelIDs) > 0 {
+		req = req.LabelIds(labelIDs...)
+	}
+
+	resp, err := req.Do()
+	if err != nil {
+		return nil, fmt.Errorf("failed to count messages: %w", err)
+	}
+
+	return &CountResult{
+		EstimatedTotal: int64(resp.ResultSizeEstimate),
+		Query:          query,
+	}, nil
+}
+
 // SendMessage sends a new email
 func (s *Service) SendMessage(ctx context.Context, to, subject, body string, cc, bcc []string) (*Message, error) {
 	// Build the message

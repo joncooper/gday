@@ -26,6 +26,12 @@ gday auth login   # Authenticate if needed
 ## Gmail Commands
 
 ```bash
+# Count emails (fast - single API call)
+gday mail count                   # Total email count
+gday mail count --unread          # Unread count
+gday mail count -q "from:boss"    # Count from specific sender
+gday mail count --json            # JSON output
+
 # List recent emails
 gday mail list                    # 10 recent emails
 gday mail list -n 25              # 25 emails
@@ -100,6 +106,12 @@ gday cal today --json
 ```
 
 ## Common Patterns
+
+**Check inbox scale before fetching (important for large inboxes!):**
+```bash
+gday mail count --unread          # Might return 47,382!
+gday mail count -q "is:unread newer_than:7d"  # Narrow down first
+```
 
 **Find specific emails:**
 ```bash

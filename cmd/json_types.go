@@ -6,16 +6,16 @@ import "time"
 
 // MessageJSON represents a message in JSON output
 type MessageJSON struct {
-	ID        string           `json:"id"`
-	ThreadID  string           `json:"thread_id"`
-	Date      time.Time        `json:"date"`
-	From      string           `json:"from"`
-	To        string           `json:"to"`
-	Subject   string           `json:"subject"`
-	Snippet   string           `json:"snippet,omitempty"`
-	Body      string           `json:"body,omitempty"`
-	Labels    []string         `json:"labels,omitempty"`
-	IsUnread  bool             `json:"is_unread"`
+	ID          string           `json:"id"`
+	ThreadID    string           `json:"thread_id"`
+	Date        time.Time        `json:"date"`
+	From        string           `json:"from"`
+	To          string           `json:"to"`
+	Subject     string           `json:"subject"`
+	Snippet     string           `json:"snippet,omitempty"`
+	Body        string           `json:"body,omitempty"`
+	Labels      []string         `json:"labels,omitempty"`
+	IsUnread    bool             `json:"is_unread"`
 	Attachments []AttachmentJSON `json:"attachments,omitempty"`
 }
 
@@ -56,6 +56,12 @@ type SendResultJSON struct {
 // LabelsJSON represents labels list
 type LabelsJSON struct {
 	Labels []string `json:"labels"`
+}
+
+// CountJSON represents message count results
+type CountJSON struct {
+	Query          string `json:"query,omitempty"`
+	EstimatedTotal int64  `json:"estimated_total"`
 }
 
 // JSON output types for Calendar
